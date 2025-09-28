@@ -1,5 +1,5 @@
 {
-  description = "Knowledge Notebook Dev Environment";
+  description = "Minimal Rust + Deno Dev Environment";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -8,36 +8,23 @@
   };
 
   outputs = { self, nixpkgs, flake-utils, rust-overlay, ... }:
-    flake-utils.defaultSystems (system:
+    flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs {
           inherit system;
-          overlays = [ rust-overlay.overlay ];
+          overlays = [ rust-overlay.overlays.default ];
         };
       in {
         devShells.default = pkgs.mkShell {
           buildInputs = [
-            # Rust toolchain
-            (pkgs.rust-bin.stable.latest.default)
-
-            # Frontend toolchains
-            pkgs.nodejs_20   # Node.js LTS
-            pkgs.deno        # Deno runtime
-
-            # Database tooling
-            pkgs.postgresql_15
-
-            # Docker (if you want local infra with containers)
-            pkgs.docker
-            pkgs.docker-compose
+            (pkgs.rust-bin.stable.latest.default)  # Rust toolchain
+            pkgs.deno                              # Deno runtime
           ];
 
           shellHook = ''
-            echo "🚀 Welcome to Knowledge Notebook Dev Environment"
-            echo "Rust: $(rustc --version)"
-            echo "Node: $(node --version)"
-            echo "Deno: $(deno --version)"
-            echo "psql: $(psql --version)"
+            echo "🚀 Minimal Dev Environment Ready!"
+            rustc --version
+            deno --version
           '';
         };
       });
