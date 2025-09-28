@@ -29,6 +29,9 @@
 
             # Deno pinned via nixpkgs
             denoPackage
+
+            pkgs.postgresql_15      # psql client
+            pkgs.sqlx-cli           # for migrations
           ];
 
           shellHook = ''
