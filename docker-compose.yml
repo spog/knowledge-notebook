@@ -1,4 +1,5 @@
 version: "3.9"
+
 services:
   db:
     image: postgres:15
@@ -12,17 +13,5 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
 
-  pgadmin:
-    image: dpage/pgadmin4
-    container_name: notebook_pgadmin
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@local
-      PGADMIN_DEFAULT_PASSWORD: admin
-    ports:
-      - "8080:80"
-    depends_on:
-      - db
-
 volumes:
   db_data:
-
