@@ -18,7 +18,8 @@
 
         # 🔧 Config section: change these to bump versions
         rustVersion = "1.90.0";  # stable Rust pinned
-        denoPackage = pkgs.deno_2_5_1;  # pinned Deno (from nixpkgs)
+        #denoPackage = pkgs.deno_2_5_1;  # pinned Deno (from nixpkgs)
+        denoPackage = pkgs.deno;  # latest Deno (from nixpkgs)
 
       in {
         devShells.default = pkgs.mkShell {
