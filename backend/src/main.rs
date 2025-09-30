@@ -1,3 +1,7 @@
+mod utils; // brings in src/utils.rs
+
+use utils::serde_datetime; // so you can refer to serde_datetime directly
+
 use axum::{
     routing::{get, post},   // added get and post here
     Router,
@@ -33,6 +37,7 @@ struct PublicUser {
     id: Uuid,
     username: String,
     email: String,
+    #[serde(with = "serde_datetime")]
     created_at: DateTime<Utc>,
 }
 
