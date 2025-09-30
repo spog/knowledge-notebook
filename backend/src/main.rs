@@ -14,23 +14,26 @@ use serde::Deserialize;
 
 use serde::Serialize;
 use sqlx::FromRow;
-use chrono::NaiveDateTime;
 
-#[derive(Debug, FromRow)]
+use uuid::Uuid;
+use chrono::{DateTime, Utc};
+
+#[derive(Debug, Serialize, FromRow)]
 struct User {
-    id: i32,
+    id: Uuid,
     username: String,
     email: String,
+    #[serde(skip_serializing)]
     password_hash: String,
-    created_at: NaiveDateTime,
+    created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Serialize)]
 struct PublicUser {
-    id: i32,
+    id: Uuid,
     username: String,
     email: String,
-    created_at: NaiveDateTime,
+    created_at: DateTime<Utc>,
 }
 
 // convert from User → PublicUser
@@ -129,6 +132,52 @@ async fn list_users(
     Ok(Json(users.into_iter().map(PublicUser::from).collect()))
 }
 
+#[derive(Debug, Deserialize)]
+struct LoginRequest {
+    email: String,
+    password: String,
+}
+
+#[derive(Debug, Serialize)]
+struct LoginResponse {
+    success: bool,
+    message: String,
+    // later we’ll return a JWT token here
+}
+
+async fn login(
+    State(pool): State<Pool<Postgres>>,
+    Json(payload): Json<LoginRequest>,
+) -> Result<Json<LoginResponse>, AppError> {
+    // Fetch user by email
+    let user: Option<User> = sqlx::query_as::<_, User>(
+        "SELECT id, username, email, password_hash, created_at FROM users WHERE email = $1"
+    )
+    .bind(&payload.email)
+    .fetch_optional(&pool)
+    .await?;
+
+    match user {
+        Some(user) => {
+            if verify_password(&user.password_hash, &payload.password) {
+                Ok(Json(LoginResponse {
+                    success: true,
+                    message: "Login successful".into(),
+                }))
+            } else {
+                Ok(Json(LoginResponse {
+                    success: false,
+                    message: "Invalid password".into(),
+                }))
+            }
+        }
+        None => Ok(Json(LoginResponse {
+            success: false,
+            message: "User not found".into(),
+        })),
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
     tracing_subscriber::fmt::init();
@@ -148,6 +197,7 @@ async fn main() -> Result<(), anyhow::Error> {
     let app = Router::new()
         .route("/healthz", get(|| async { "ok" }))
         .route("/users", post(create_user).get(list_users))
+        .route("/auth/login", post(login))
         .with_state(pool);
 
     // Bind listener
