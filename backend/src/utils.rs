@@ -25,3 +25,63 @@ pub mod serde_datetime {
             .map_err(serde::de::Error::custom)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::{TimeZone, Utc};
+    use serde_json;
+
+    use chrono::DateTime;
+
+    pub trait WithSerdeDateTime {
+        fn with_serde_datetime(&self) -> SerdeDateTime;
+    }
+
+    pub struct SerdeDateTime(DateTime<Utc>);
+
+    impl WithSerdeDateTime for DateTime<Utc> {
+        fn with_serde_datetime(&self) -> SerdeDateTime {
+            SerdeDateTime(self.clone())
+        }
+    }
+
+    impl serde::Serialize for SerdeDateTime {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer,
+        {
+            serde_datetime::serialize(&self.0, serializer)
+        }
+    }
+
+    impl<'de> serde::Deserialize<'de> for SerdeDateTime {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            serde_datetime::deserialize(deserializer).map(SerdeDateTime)
+        }
+    }
+
+    #[test]
+    fn test_serialize_datetime() {
+        let dt = Utc.ymd(2025, 10, 2).and_hms(14, 30, 0);
+        let json = serde_json::to_string(&dt.with_timezone(&Utc).with_serde_datetime()).unwrap();
+        assert!(json.contains("2025-10-02 14:30:00 UTC"));
+    }
+
+    #[test]
+    fn test_roundtrip_datetime() {
+        let original = Utc.ymd(2025, 10, 2).and_hms(14, 30, 0);
+
+        // Serialize
+        let serialized = serde_json::to_string(&original.with_timezone(&Utc).with_serde_datetime()).unwrap();
+
+        // Deserialize
+        let deserialized: chrono::DateTime<Utc> =
+            serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(original, deserialized);
+    }
+}
