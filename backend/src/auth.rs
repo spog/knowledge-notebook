@@ -58,7 +58,10 @@ where
             &DecodingKey::from_secret(secret.as_bytes()),
             &Validation::default(),
         )
-        .map_err(|_| (StatusCode::UNAUTHORIZED, "auth: Invalid token".into()))?;
+        .map_err(|err| {
+            tracing::warn!("JWT decode failed: {}", err);
+           (StatusCode::UNAUTHORIZED, "Invalid token".into())
+        })?;
 
         let user_id = Uuid::parse_str(&token_data.claims.sub)
             .map_err(|_| (StatusCode::UNAUTHORIZED, "Invalid user id in token".into()))?;
