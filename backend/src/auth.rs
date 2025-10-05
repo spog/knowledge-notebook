@@ -48,6 +48,7 @@ where
 
         let token = auth_header
             .strip_prefix("Bearer ")
+            .or_else(|| auth_header.strip_prefix("bearer "))
             .ok_or((StatusCode::UNAUTHORIZED, "Invalid Authorization scheme".into()))?;
 
         let secret = std::env::var("JWT_SECRET").unwrap_or_else(|_| "insecure_dev_secret".into());
