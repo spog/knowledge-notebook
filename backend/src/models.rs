@@ -53,8 +53,8 @@ pub struct LoginResponse {
 // JWT claims
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
-    pub sub: String, // user id as uuid string
-    pub exp: usize,
+    pub sub: String, // user id (from JWT)
+    pub exp: usize,  // expiration time
 }
 
 //*** End File

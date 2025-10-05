@@ -1,13 +1,11 @@
 //*** Begin File: backend/src/users.rs
 use axum::{Json, extract::State, http::StatusCode};
+use sqlx::PgPool;
 use serde_json::json;
-use sqlx::postgres::PgPool;
-use crate::models::{CreateUser, PublicUser, User, LoginRequest, LoginResponse, Claims};
+use crate::auth::AuthUser;
+use crate::models::{CreateUser, PublicUser, User, LoginRequest, LoginResponse};
 use crate::utils::{hash_password, verify_password};
-use crate::auth::{issue_jwt, validate_jwt};
-use anyhow::Context;
-use sqlx::types::Uuid;
-use sqlx::PgPool as Pool;
+use crate::auth::{issue_jwt};
 
 /// Register a new user (POST /auth/register)
 pub async fn register(
@@ -63,27 +61,15 @@ pub async fn login(
 /// Protected route: list users for debugging (GET /users)
 pub async fn list_users(
     State(pool): State<PgPool>,
-    auth_header: Option<axum::http::HeaderMap>,
-) -> Result<Json<Vec<PublicUser>>, (StatusCode, String)> {
-    // Expect Authorization: Bearer <token>
-    let header = auth_header.ok_or((StatusCode::UNAUTHORIZED, "Missing headers".to_string()))?;
-    let auth_val = header.get("authorization").and_then(|v| v.to_str().ok()).ok_or((StatusCode::UNAUTHORIZED, "Missing authorization".to_string()))?;
-    if !auth_val.starts_with("Bearer ") {
-        return Err((StatusCode::UNAUTHORIZED, "Invalid authorization scheme".to_string()));
-    }
-    let token = &auth_val["Bearer ".len()..];
-    let token_data = validate_jwt(token).map_err(|_| (StatusCode::UNAUTHORIZED, "Invalid token".to_string()))?;
-    // token_data.claims.sub is user id string; we won't use it here but could filter
+    _auth: AuthUser, // <── extractor used here
+) -> Result<Json<Vec<PublicUser>>, (axum::http::StatusCode, String)> {
+    let users = sqlx::query_as::<_, User>("SELECT id, username, email, password_hash, created_at FROM users")
+        .fetch_all(&pool)
+        .await
+        .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let users: Vec<User> = sqlx::query_as::<_, User>(
-        "SELECT id, username, email, password_hash, created_at FROM users"
-    )
-    .fetch_all(&pool)
-    .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    let public: Vec<PublicUser> = users.into_iter().map(|u| u.into()).collect();
-    Ok(Json(public))
+    let public_users = users.into_iter().map(PublicUser::from).collect();
+    Ok(Json(public_users))
 }
 
 //*** End File

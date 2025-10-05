@@ -1,7 +1,7 @@
 //*** Begin File: backend/src/main.rs
 use axum::{
     routing::{get, post},
-    Router, Json,
+    Router,
 };
 use std::net::SocketAddr;
 use sqlx::postgres::PgPoolOptions;
