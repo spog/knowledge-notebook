@@ -63,6 +63,7 @@ pub async fn list_users(
     State(pool): State<PgPool>,
     _auth: AuthUser, // <── extractor used here
 ) -> Result<Json<Vec<PublicUser>>, (axum::http::StatusCode, String)> {
+    tracing::info!("Authenticated user: {}", _auth.user_id);
     let users = sqlx::query_as::<_, User>("SELECT id, username, email, password_hash, created_at FROM users")
         .fetch_all(&pool)
         .await
