@@ -16,7 +16,8 @@ use std::env;
 /// Issue a JWT for given subject (user id as string)
 pub fn issue_jwt(sub: &str) -> Result<String, anyhow::Error> {
     // Secret should come from env var JWT_SECRET
-    let secret = env::var("JWT_SECRET").unwrap_or_else(|_| "insecure_dev_secret".to_string());
+    let secret = env::var("JWT_SECRET")
+        .context("JWT_SECRET environment variable is not set")?;
     let exp = (Utc::now() + Duration::hours(24)).timestamp() as usize;
     let claims = Claims {
         sub: sub.to_string(),
@@ -51,7 +52,9 @@ where
             .or_else(|| auth_header.strip_prefix("bearer "))
             .ok_or((StatusCode::UNAUTHORIZED, "Invalid Authorization scheme".into()))?;
 
-        let secret = std::env::var("JWT_SECRET").unwrap_or_else(|_| "insecure_dev_secret".into());
+        let secret = std::env::var("JWT_SECRET")
+            .context("JWT_SECRET environment variable is not set")
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
         let token_data = decode::<Claims>(
             token,
